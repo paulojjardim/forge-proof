@@ -5,18 +5,21 @@
 # `vX.Y.Z-rc.N` sobre um commit de `main`. Este workflow leva **esse
 # commit** ao environment `qual`.
 #
+# Antes de construir, o FORGE pergunta se o commit pode ir para Qual
+# (ADR-0008): a check `FORGE verify` dele passou, e está em `main`.
+#
+# **Constrói-se aqui, uma vez** (M08). O artefacto fica guardado neste run,
+# com o commit (`FORGE_COMMIT`) e o SHA-256 de cada ficheiro (`SHA256SUMS`);
+# a Produção instala **esse** — não volta a construir (deploy-prod.yml).
+#
 # O que é do projeto vive fora deste ficheiro:
 #
-#   .github/forge/build.sh        constrói o artefacto, uma vez — o mesmo
-#                                 que a produção vai receber (M08);
-#   .github/forge/deploy-qual.sh  instala-o em Qual.
+#   .github/forge/build.sh        escreve o artefacto em "$FORGE_ARTIFACT_DIR";
+#   .github/forge/deploy-qual.sh  instala-o em Qual, a partir de lá.
 #
 # Sem eles, o workflow **falha** — nunca finge um deploy. O environment
 # `qual` (Settings → Environments) diz quem pode aprovar e quando; o estado
 # do deploy fica nos GitHub Deployments, e não num ficheiro.
-#
-# Versão de base (Wave 1, M03): a regra de promoção — o conteúdo validado em
-# Qual, a janela, o rollback — completa-se no programa FORGE 1.0, M07/M08.
 
 name: Deploy Qual
 
@@ -36,6 +39,9 @@ jobs:
     name: Deploy Qual
     runs-on: ubuntu-latest
     environment: qual
+    permissions:
+      contents: read
+      checks: read
     steps:
       - name: Checkout do commit exato da tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -53,15 +59,35 @@ jobs:
         env:
           FORGE_SOURCE: ${{ vars.FORGE_SOURCE }}
 
+      - name: forge status --promotion --target qual — este commit pode ir para Qual
+        run: forge status --promotion "${GITHUB_SHA}" --target qual
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
       - name: Preparar o projeto (.github/forge/setup)
         if: hashFiles('.github/forge/setup/action.yml') != ''
         uses: ./.github/forge/setup
 
-      - name: forge verify — o conteúdo da tag passa o contrato
-        run: forge verify
+      - name: Construir o artefacto, uma vez (.github/forge/build.sh)
+        run: |
+          mkdir -p "$FORGE_ARTIFACT_DIR"
+          bash .github/forge/build.sh
+          test -n "$(ls -A "$FORGE_ARTIFACT_DIR")"
+          cd "$FORGE_ARTIFACT_DIR"
+          printf '%s\n' "$GITHUB_SHA" > FORGE_COMMIT
+          find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+        env:
+          FORGE_ARTIFACT_DIR: ${{ runner.temp }}/forge-artifact
 
-      - name: Construir o artefacto (.github/forge/build.sh)
-        run: bash .github/forge/build.sh
+      - name: Guardar o artefacto — o que a Produção vai instalar
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: forge-artifact-${{ github.sha }}
+          path: ${{ runner.temp }}/forge-artifact
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Deploy para Qual (.github/forge/deploy-qual.sh)
         run: bash .github/forge/deploy-qual.sh
+        env:
+          FORGE_ARTIFACT_DIR: ${{ runner.temp }}/forge-artifact

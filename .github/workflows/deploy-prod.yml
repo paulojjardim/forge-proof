@@ -2,22 +2,23 @@
 # forge-template: deploy-prod 1.0
 #
 # Uma release é uma tag `vX.Y.Z` sobre **o mesmo commit** que passou em Qual
-# (D-4). Antes de instalar, o FORGE pergunta se a promoção deste commit
-# exato foi aceite por uma conta da Functional Authority (ADR-0004): sem
-# isso, o workflow pára.
+# (D-4). Antes de instalar, o FORGE pergunta se o commit pode ir para
+# Produção (ADR-0008): validado em Qual, o PR de release aprovado pela
+# Functional Authority, todos os trabalhos referidos, a janela, o rollback e
+# a segregação. Sem isso, o workflow para.
+#
+# **Não se constrói outra vez** (M08): instala-se o artefacto que o
+# deploy-qual.yml construiu para este commit, depois de conferir o commit e
+# o SHA-256 de cada ficheiro.
 #
 # O que é do projeto vive fora deste ficheiro:
 #
-#   .github/forge/build.sh         o mesmo artefacto que foi para Qual (M08);
-#   .github/forge/deploy-prod.sh   instala-o em produção.
+#   .github/forge/deploy-prod.sh   instala em produção o artefacto que está
+#                                  em "$FORGE_ARTIFACT_DIR".
 #
-# Sem eles, o workflow **falha**. O environment `prod` (Settings →
-# Environments) diz quem pode aprovar e a janela; o estado do deploy fica nos
-# GitHub Deployments.
-#
-# Versão de base (Wave 1, M03): o conteúdo validado em Qual, o PR de release,
-# a janela, o rollback e a segregação completam-se no programa FORGE 1.0,
-# M07/M08 (`forge status --promotion <ref> --environment prod`).
+# Sem ele, o workflow **falha**. O environment `prod` (Settings →
+# Environments) diz quem aprova o deploy — a Functional Authority — e em que
+# ramos ou tags; o estado do deploy fica nos GitHub Deployments.
 
 name: Deploy Prod
 
@@ -39,7 +40,11 @@ jobs:
     environment: prod
     permissions:
       contents: read
+      checks: read
+      deployments: read
       pull-requests: read
+      issues: read
+      actions: read
     steps:
       - name: Checkout do commit exato da tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -57,17 +62,42 @@ jobs:
         env:
           FORGE_SOURCE: ${{ vars.FORGE_SOURCE }}
 
-      - name: forge status --promotion — a Authority aceitou este commit
-        run: forge status --promotion "${GITHUB_SHA}"
+      - name: forge status --promotion --target prod — este commit pode ir para Produção
+        run: forge status --promotion "${GITHUB_SHA}" --target prod
         env:
           GITHUB_TOKEN: ${{ github.token }}
+
+      - name: O run de Qual que construiu este commit
+        id: qual
+        run: |
+          run_id="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow deploy-qual.yml --commit "$GITHUB_SHA" --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+          test -n "$run_id"
+          test "$run_id" != "null"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: O artefacto de Qual — não se constrói outra vez
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: forge-artifact-${{ github.sha }}
+          path: ${{ runner.temp }}/forge-artifact
+          run-id: ${{ steps.qual.outputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: O mesmo artefacto — o commit e o SHA-256 de cada ficheiro
+        run: |
+          cd "$FORGE_ARTIFACT_DIR"
+          test "$(cat FORGE_COMMIT)" = "$GITHUB_SHA"
+          sha256sum --check --strict SHA256SUMS
+        env:
+          FORGE_ARTIFACT_DIR: ${{ runner.temp }}/forge-artifact
 
       - name: Preparar o projeto (.github/forge/setup)
         if: hashFiles('.github/forge/setup/action.yml') != ''
         uses: ./.github/forge/setup
 
-      - name: Construir o artefacto (.github/forge/build.sh)
-        run: bash .github/forge/build.sh
-
       - name: Deploy para Produção (.github/forge/deploy-prod.sh)
         run: bash .github/forge/deploy-prod.sh
+        env:
+          FORGE_ARTIFACT_DIR: ${{ runner.temp }}/forge-artifact
