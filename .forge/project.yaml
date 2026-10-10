@@ -13,7 +13,6 @@ profile:
 
 executor:
   instructions: AGENTS.md
-  account: "paulojjardim-forge-agent[bot]"
 
 verification:
   test: python -m unittest discover -s tests
