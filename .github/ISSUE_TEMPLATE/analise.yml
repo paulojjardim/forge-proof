@@ -7,8 +7,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        A Functional Authority aprova **esta definição** — o FORGE lê a aprovação aqui, e uma alteração depois de aprovada torna-a `STALE`.
-        Sem campo de estado: o estado vive nas etiquetas, no projeto e nas revisões, e as conclusões (`READY_TO_START`…) derivam-se.
+        A Functional Authority aprova **esta definição** — o FORGE lê a aprovação aqui, e uma alteração depois de aprovada torna-a `DEFINITION_STALE`.
+        Sem campo de estado: o estado vive nas etiquetas, no projeto e nas revisões, e as conclusões derivam-se — `forge status --work #N` diz se é `READY_TO_START`.
   - type: input
     id: pedido
     attributes:
@@ -27,7 +27,7 @@ body:
     id: questoes
     attributes:
       label: Questões em aberto
-      description: O que falta saber. Uma questão em aberto não se responde por suposição.
+      description: O que falta saber, uma por linha `- [ ]`, com quem responde; respondida, `- [x]`. Uma questão em aberto não se responde por suposição — e impede começar.
   - type: textarea
     id: necessidade
     attributes:

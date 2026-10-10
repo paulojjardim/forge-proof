@@ -7,20 +7,23 @@ project:
 authority:
   functional: Paulo Jardim
   accounts: paulojjardim
+  solo: yes
+  require_work_approval: yes
 
 profile:
-  default: FAST
+  default: STANDARD
 
 executor:
   instructions: AGENTS.md
-  account: "paulojjardim-forge-agent[bot]"
+  account: paulojjardim-forge-agent[bot]
 
 verification:
   test: python -m unittest discover -s tests
   build: python -m compileall -q loja.py
-  lint: null
-  security_scan: null
+  lint: ruff check .
+  security_scan: python -m forge_tools.vulnerabilities python -- -r requirements.txt
   coverage: python -m forge_tools.coverage coverage.xml
+  secrets: python -m forge_tools.secrets
 
 coverage:
   2027-01-10: 30
