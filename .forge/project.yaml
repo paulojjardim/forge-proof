@@ -9,7 +9,7 @@ authority:
   accounts: paulojjardim
 
 profile:
-  default: FAST
+  default: HIGH
 
 executor:
   instructions: AGENTS.md
