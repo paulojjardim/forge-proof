@@ -1,0 +1,67 @@
+# FORGE — deploy para Qual. Gerido pelo pack `github`; não se edita.
+# forge-template: deploy-qual 1.0
+#
+# Trunk-based com promoção por tags (D-4): um candidato é uma tag
+# `vX.Y.Z-rc.N` sobre um commit de `main`. Este workflow leva **esse
+# commit** ao environment `qual`.
+#
+# O que é do projeto vive fora deste ficheiro:
+#
+#   .github/forge/build.sh        constrói o artefacto, uma vez — o mesmo
+#                                 que a produção vai receber (M08);
+#   .github/forge/deploy-qual.sh  instala-o em Qual.
+#
+# Sem eles, o workflow **falha** — nunca finge um deploy. O environment
+# `qual` (Settings → Environments) diz quem pode aprovar e quando; o estado
+# do deploy fica nos GitHub Deployments, e não num ficheiro.
+#
+# Versão de base (Wave 1, M03): a regra de promoção — o conteúdo validado em
+# Qual, a janela, o rollback — completa-se no programa FORGE 1.0, M07/M08.
+
+name: Deploy Qual
+
+on:
+  push:
+    tags: ['v*-rc.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-qual
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Qual
+    runs-on: ubuntu-latest
+    environment: qual
+    steps:
+      - name: Checkout do commit exato da tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Python para o FORGE
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Instalar o FORGE
+        run: python -m pip install "${FORGE_SOURCE:?a variável do repositório FORGE_SOURCE tem de dizer que FORGE instalar}"
+        env:
+          FORGE_SOURCE: ${{ vars.FORGE_SOURCE }}
+
+      - name: Preparar o projeto (.github/forge/setup)
+        if: hashFiles('.github/forge/setup/action.yml') != ''
+        uses: ./.github/forge/setup
+
+      - name: forge verify — o conteúdo da tag passa o contrato
+        run: forge verify
+
+      - name: Construir o artefacto (.github/forge/build.sh)
+        run: bash .github/forge/build.sh
+
+      - name: Deploy para Qual (.github/forge/deploy-qual.sh)
+        run: bash .github/forge/deploy-qual.sh

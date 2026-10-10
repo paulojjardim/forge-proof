@@ -1,0 +1,41 @@
+# forge-template: issue-pedido 1.0 — gerido pelo pack `github` do FORGE.
+name: Pedido
+description: Um pedido novo — uma necessidade, uma ideia, um problema. A triagem decide o que acontece a seguir.
+title: "[Pedido] "
+labels: ["pedido"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Escreva o pedido **tal como chega** — sem traduzir para solução. A análise funcional, se o pedido avançar, é outra issue (o template «Análise funcional»).
+        O estado do pedido vive aqui, nas etiquetas e no projeto — e não num campo deste formulário.
+  - type: textarea
+    id: pedido
+    attributes:
+      label: O pedido
+      description: O que se pede, nas palavras de quem pede.
+    validations:
+      required: true
+  - type: textarea
+    id: porque
+    attributes:
+      label: Porquê
+      description: Que problema resolve, ou que valor traz. Quem é afetado.
+    validations:
+      required: true
+  - type: input
+    id: quem
+    attributes:
+      label: Quem pede
+      description: A pessoa ou a área que fez o pedido.
+    validations:
+      required: true
+  - type: input
+    id: prazo
+    attributes:
+      label: Prazo ou janela, se houver
+  - type: textarea
+    id: material
+    attributes:
+      label: Material de origem
+      description: Ligações para o e-mail, a apresentação, a conversa — por referência. O material bruto nunca é a especificação.
