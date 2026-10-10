@@ -1,0 +1,45 @@
+# forge-template: issue-incidente 1.0 — gerido pelo pack `github` do FORGE.
+name: Incidente
+description: Algo falhou em produção, ou um segredo foi exposto. Mitigar primeiro; perceber e corrigir depois.
+title: "[Incidente] "
+labels: ["incidente"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Mitigar antes de perceber.** O registo vive aqui; a correção é um PR que refere esta issue, e a promoção dela segue o caminho de hotfix.
+        Um segredo exposto: revogá-lo **antes** de tudo o resto — apagá-lo do repositório não chega.
+  - type: textarea
+    id: o-que
+    attributes:
+      label: O que aconteceu
+      description: O que se observou, e quando começou.
+    validations:
+      required: true
+  - type: textarea
+    id: impacto
+    attributes:
+      label: Impacto
+      description: Quem e o que foi afetado, e quanto.
+    validations:
+      required: true
+  - type: input
+    id: versao
+    attributes:
+      label: Versão em produção
+      description: A tag ou o commit que está em produção.
+  - type: textarea
+    id: mitigacao
+    attributes:
+      label: Mitigação
+      description: O que se fez para conter — reverter, desligar, revogar.
+  - type: textarea
+    id: causa
+    attributes:
+      label: Causa
+      description: Preenche-se quando se souber; até lá, «por apurar».
+  - type: textarea
+    id: prevencao
+    attributes:
+      label: Para não voltar a acontecer
+      description: O teste que reproduz a falha, e o que muda no processo.

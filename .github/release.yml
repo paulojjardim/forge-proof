@@ -1,0 +1,19 @@
+# forge-template: release 1.0 — gerido pelo pack `github` do FORGE.
+# As categorias das notas de release que o GitHub gera, por etiqueta do PR.
+# As notas de cada versão escrevem-se a partir do `release-notes-template.md`
+# da playbook; isto só as agrupa.
+changelog:
+  exclude:
+    labels:
+      - sem-notas
+  categories:
+    - title: Funcionalidades
+      labels: [funcionalidade]
+    - title: Correções
+      labels: [correcao, hotfix]
+    - title: Segurança
+      labels: [seguranca]
+    - title: Técnico
+      labels: [tecnico]
+    - title: Outras alterações
+      labels: ["*"]

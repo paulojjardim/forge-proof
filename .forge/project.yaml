@@ -1,0 +1,32 @@
+# .forge/project.yaml — FORGE
+# Engineering with AI, by design.
+
+project:
+  name: loja
+
+authority:
+  functional: Paulo Jardim
+  accounts: paulojjardim
+
+profile:
+  default: FAST
+
+executor:
+  instructions: AGENTS.md
+  account: "paulojjardim-forge-agent[bot]"
+
+verification:
+  test: python -m unittest discover -s tests
+  build: python -m compileall -q loja.py
+  lint: null
+  security_scan: null
+  coverage: python -m forge_tools.coverage coverage.xml
+
+coverage:
+  2027-01-10: 30
+  2027-04-10: 50
+  2027-10-10: 70
+
+packs:
+  - github
+  - python

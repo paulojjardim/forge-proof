@@ -1,0 +1,171 @@
+# FORGE — a verificação, a prontidão e a atestação, na CI. Um caminho só.
+# forge-template: forge 1.0
+#
+# Ficheiro gerido pelo pack `github` do FORGE (`forge adopt --packs github`).
+# **Não se edita:** uma cópia alterada à mão não é atualizada pelo FORGE. O
+# que é do projeto vive fora dele:
+#
+#   vars.FORGE_SOURCE          a versão do FORGE que a CI instala — uma
+#                              variável do repositório (Settings → Secrets
+#                              and variables → Actions → Variables), por
+#                              exemplo `forge @ git+https://…/FORGE@forge-v1.0.0`
+#                              ou o URL do wheel com `--hash` (ver o
+#                              `github-offline.md` do pack). Vazia, a check
+#                              falha — nunca corre um FORGE por fixar;
+#   .github/forge/setup/       a preparação do projeto, se existir — uma ação
+#                              composta local (`action.yml`): o runtime e as
+#                              dependências de que os comandos do
+#                              `.forge/project.yaml` precisam
+#                              (`actions/setup-node`, `npm ci`, o gitleaks no
+#                              STANDARD e no HIGH). Instalar não é verificar:
+#                              nenhum build, teste, lint ou scan.
+#
+# Três jobs, num só run, e **a verificação corre uma vez**:
+#
+#   FORGE verify   corre `forge verify` sobre o commit exato — a check que a
+#                  proteção de `main` exige. Guarda o recibo e a declaração.
+#   FORGE ready    lê o recibo do job anterior (não volta a verificar) e
+#                  corre `forge status --require-ready`: a revisão, a
+#                  aprovação do trabalho e a aceitação, lidas do PR.
+#   FORGE attest   assina a declaração do job `verify` — só num push para
+#                  `main`, e só com a variável `FORGE_ATTEST` a `true`.
+#                  **Opcional.**
+#
+# Sem filtros de caminhos e sem `if` nos jobs: uma check exigida que não
+# corre fica pendente, e um job saltado conta como sucesso. As condições
+# estão nos passos. As ações estão fixadas por SHA (a versão no comentário).
+#
+# **Os artefactos da verificação têm de estar no `.gitignore`** (`dist/`,
+# `build/`, `__pycache__/`…, e `.forge/verification.json`): o job `ready`
+# faz um checkout limpo, e um artefacto por ignorar mudava o conteúdo face
+# ao que se verificou.
+#
+# Trunk-based (ADR-0006, D-4): `main`, ramos curtos e pull requests. Para
+# serem exigidas no merge, `FORGE verify` e `FORGE ready` entram nas checks
+# exigidas da proteção de `main` — o `forge doctor` di-lo.
+
+name: FORGE
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Por omissão só se lê. A escrita (`id-token`, `attestations`) é só do job
+# `attest`, que a declara.
+permissions:
+  contents: read
+
+concurrency:
+  group: forge-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: FORGE verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do commit exato
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          # A história toda: a base da alteração (`origin/<destino>`) é o
+          # que o enfraquecimento e o âmbito aprovado comparam.
+          fetch-depth: 0
+
+      - name: Python para o FORGE
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Preparar o projeto (.github/forge/setup)
+        if: hashFiles('.github/forge/setup/action.yml') != ''
+        uses: ./.github/forge/setup
+
+      - name: Instalar o FORGE
+        run: python -m pip install "${FORGE_SOURCE:?a variável do repositório FORGE_SOURCE tem de dizer que FORGE instalar}"
+        env:
+          FORGE_SOURCE: ${{ vars.FORGE_SOURCE }}
+
+      - name: forge verify
+        # A declaração escreve-se fora do repositório: não muda o conteúdo.
+        run: forge verify --attest "${RUNNER_TEMP}/forge-attestation.json"
+
+      - name: Guardar o recibo
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: forge-receipt
+          include-hidden-files: true
+          path: .forge/verification.json
+
+      - name: Guardar a declaração
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: forge-attestation
+          path: ${{ runner.temp }}/forge-attestation.json
+
+  ready:
+    name: FORGE ready
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    steps:
+      - name: Checkout do commit exato
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          # A história toda: a base da alteração (`origin/<destino>`) é o
+          # que o enfraquecimento e o âmbito aprovado comparam.
+          fetch-depth: 0
+
+      - name: Python para o FORGE
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Instalar o FORGE
+        run: python -m pip install "${FORGE_SOURCE:?a variável do repositório FORGE_SOURCE tem de dizer que FORGE instalar}"
+        env:
+          FORGE_SOURCE: ${{ vars.FORGE_SOURCE }}
+
+      - name: O recibo da verificação deste run
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: forge-receipt
+          path: .forge
+
+      - name: forge status --require-ready
+        # Num pull request; num push, não há PR a integrar.
+        if: github.event_name == 'pull_request'
+        run: forge status --require-ready
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  attest:
+    name: FORGE attest
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: A declaração da verificação deste run
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: forge-attestation
+          path: ${{ runner.temp }}/forge-evidence
+
+      - name: Assinar a declaração
+        # Só num push para `main`, e só se o projeto o ligou.
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.FORGE_ATTEST == 'true'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6  # v4.2.2
+        with:
+          subject-path: ${{ runner.temp }}/forge-evidence/forge-attestation.json
+          predicate-type: urn:forge:attestation:verification:v1
+          predicate-path: ${{ runner.temp }}/forge-evidence/forge-attestation.json

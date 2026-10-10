@@ -1,0 +1,73 @@
+# FORGE — deploy para Produção. Gerido pelo pack `github`; não se edita.
+# forge-template: deploy-prod 1.0
+#
+# Uma release é uma tag `vX.Y.Z` sobre **o mesmo commit** que passou em Qual
+# (D-4). Antes de instalar, o FORGE pergunta se a promoção deste commit
+# exato foi aceite por uma conta da Functional Authority (ADR-0004): sem
+# isso, o workflow pára.
+#
+# O que é do projeto vive fora deste ficheiro:
+#
+#   .github/forge/build.sh         o mesmo artefacto que foi para Qual (M08);
+#   .github/forge/deploy-prod.sh   instala-o em produção.
+#
+# Sem eles, o workflow **falha**. O environment `prod` (Settings →
+# Environments) diz quem pode aprovar e a janela; o estado do deploy fica nos
+# GitHub Deployments.
+#
+# Versão de base (Wave 1, M03): o conteúdo validado em Qual, o PR de release,
+# a janela, o rollback e a segregação completam-se no programa FORGE 1.0,
+# M07/M08 (`forge status --promotion <ref> --environment prod`).
+
+name: Deploy Prod
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Prod
+    runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout do commit exato da tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Python para o FORGE
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Instalar o FORGE
+        run: python -m pip install "${FORGE_SOURCE:?a variável do repositório FORGE_SOURCE tem de dizer que FORGE instalar}"
+        env:
+          FORGE_SOURCE: ${{ vars.FORGE_SOURCE }}
+
+      - name: forge status --promotion — a Authority aceitou este commit
+        run: forge status --promotion "${GITHUB_SHA}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Preparar o projeto (.github/forge/setup)
+        if: hashFiles('.github/forge/setup/action.yml') != ''
+        uses: ./.github/forge/setup
+
+      - name: Construir o artefacto (.github/forge/build.sh)
+        run: bash .github/forge/build.sh
+
+      - name: Deploy para Produção (.github/forge/deploy-prod.sh)
+        run: bash .github/forge/deploy-prod.sh

@@ -1,0 +1,82 @@
+# FORGE — reavaliar a prontidão quando chega uma revisão. Gerido pelo pack
+# `github`; não se edita.
+# forge-template: forge-reevaluate 1.0
+#
+# Uma aprovação (ou uma revisão retirada) muda a prontidão, e não muda o
+# conteúdo: **não se verifica outra vez.** Este workflow procura o run do
+# `forge.yml` para a **mesma cabeça do PR**, descarrega o recibo que o job
+# `FORGE verify` deixou, e corre só `forge status --require-ready`.
+#
+# O job chama-se `FORGE ready`: é a check que a proteção de `main` exige, e
+# fica no mesmo commit — a revisão atualiza-a sem ninguém carregar em
+# «Re-run».
+#
+# **Sem recibo deste commit, falha** — nunca dá `READY` sem a verificação.
+# Um recibo só existe se o `forge verify` passou (o passo que o guarda vem
+# depois dele), e o `forge status` confere-o contra o conteúdo exato.
+
+name: FORGE reevaluate
+
+on:
+  pull_request_review:
+    types: [submitted, dismissed]
+
+# Só leitura: o código, o PR, a issue do trabalho, e os runs e artefactos do
+# próprio repositório.
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  actions: read
+
+concurrency:
+  group: forge-ready-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
+
+jobs:
+  ready:
+    name: FORGE ready
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout da cabeça do PR
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Python para o FORGE
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Instalar o FORGE
+        run: python -m pip install "${FORGE_SOURCE:?a variável do repositório FORGE_SOURCE tem de dizer que FORGE instalar}"
+        env:
+          FORGE_SOURCE: ${{ vars.FORGE_SOURCE }}
+
+      - name: O run da verificação desta cabeça
+        id: verificacao
+        # Só lê: o run mais recente do `forge.yml`, de um pull request, para
+        # este commit. Sem ele, o passo falha — e a check também.
+        run: |
+          run_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/forge.yml/runs?head_sha=${HEAD_SHA}&event=pull_request&status=completed&per_page=1" --jq '.workflow_runs[0].id // empty')"
+          test -n "${run_id}" || { echo "::error::não há verificação do forge.yml para ${HEAD_SHA}: a prontidão não se avalia sem ela"; exit 1; }
+          echo "run-id=${run_id}" >> "${GITHUB_OUTPUT}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+      - name: O recibo dessa verificação
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: forge-receipt
+          path: .forge
+          run-id: ${{ steps.verificacao.outputs.run-id }}
+          github-token: ${{ github.token }}
+
+      - name: forge status --require-ready
+        run: forge status --require-ready --target "${BASE_REF}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}

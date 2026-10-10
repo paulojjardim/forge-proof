@@ -1,0 +1,74 @@
+# forge-template: issue-analise 1.0 — gerido pelo pack `github` do FORGE.
+name: Análise funcional
+description: A definição de um trabalho, para a Functional Authority aprovar antes de se implementar.
+title: "[Análise] "
+labels: ["analise"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A Functional Authority aprova **esta definição** — o FORGE lê a aprovação aqui, e uma alteração depois de aprovada torna-a `STALE`.
+        Sem campo de estado: o estado vive nas etiquetas, no projeto e nas revisões, e as conclusões (`READY_TO_START`…) derivam-se.
+  - type: input
+    id: pedido
+    attributes:
+      label: Pedido original
+      description: A issue do pedido (`#N`) ou o material, por referência.
+    validations:
+      required: true
+  - type: textarea
+    id: interpretacao
+    attributes:
+      label: Interpretação
+      description: O que se entendeu do pedido, por palavras de quem analisa.
+    validations:
+      required: true
+  - type: textarea
+    id: questoes
+    attributes:
+      label: Questões em aberto
+      description: O que falta saber. Uma questão em aberto não se responde por suposição.
+  - type: textarea
+    id: necessidade
+    attributes:
+      label: Necessidade
+      description: O resultado que se quer — não a solução.
+    validations:
+      required: true
+  - type: textarea
+    id: ambito
+    attributes:
+      label: Âmbito
+      description: |
+        O que esta alteração faz. Opcionalmente, uma linha que o FORGE compara com o diff:
+        `Âmbito-ficheiros: src/carrinho/**, tests/test_carrinho.py`
+    validations:
+      required: true
+  - type: textarea
+    id: fora
+    attributes:
+      label: Fora de âmbito
+      description: O que esta alteração **não** faz. Obrigatório — é o que mais facilmente se perde.
+    validations:
+      required: true
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Critérios de aceitação
+      description: Numerados `CA-1`, `CA-2`… — um teste que prova um critério cita-o no nome.
+      value: |
+        - CA-1:
+    validations:
+      required: true
+  - type: textarea
+    id: documentacao
+    attributes:
+      label: Impacto na documentação
+      description: Que documentação muda — ou «sem impacto», com o porquê.
+    validations:
+      required: true
+  - type: textarea
+    id: decisoes
+    attributes:
+      label: Decisões
+      description: O que se decidiu, e por quem.

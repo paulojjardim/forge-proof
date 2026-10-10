@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "files": {
+    ".github/ISSUE_TEMPLATE/analise.yml": {
+      "sha256": "d6034a2a929487e18e94e48ca72340896a1dc830e7bb39d275e2734e5dc4369b",
+      "pack": "github@1.0.0"
+    },
+    ".github/ISSUE_TEMPLATE/incidente.yml": {
+      "sha256": "20fefcaa0fd942e1d3fa50d5059e8b2189c03b37cbe48bbc5a133134db20a40c",
+      "pack": "github@1.0.0"
+    },
+    ".github/ISSUE_TEMPLATE/pedido.yml": {
+      "sha256": "ee59a4c74529f1f9538902aa0e82239a0279a6e156c95f998a612002f4217fcf",
+      "pack": "github@1.0.0"
+    },
+    ".github/pull_request_template.md": {
+      "sha256": "985084a5fe50076a6e5074d4737bf18ffa84ebab06de201c7b9350070815e764",
+      "pack": "github@1.0.0"
+    },
+    ".github/release.yml": {
+      "sha256": "fa05a6c52f2065561bd9d3efd363e62376f07548731d480fbb4d35ac15fcf0a7",
+      "pack": "github@1.0.0"
+    },
+    ".github/workflows/deploy-prod.yml": {
+      "sha256": "896f91052ae630dd5ca5436000f47a5f32055871890a0a2da8835aaad23d86a1",
+      "pack": "github@1.0.0"
+    },
+    ".github/workflows/deploy-qual.yml": {
+      "sha256": "897425ecc4148529666ea9b8c990fe6053095b40d3514e8829287de1e53116b8",
+      "pack": "github@1.0.0"
+    },
+    ".github/workflows/forge-reevaluate.yml": {
+      "sha256": "30e5dd5421eaffb495471c79f70c5b6532040e7b71629114ba015082edfce1cf",
+      "pack": "github@1.0.0"
+    },
+    ".github/workflows/forge.yml": {
+      "sha256": "bccb0923c56e2d153c29fd243e13d2d1f4cf8c0a183d4f0e92766a35a58dd0af",
+      "pack": "github@1.0.0"
+    }
+  }
+}
