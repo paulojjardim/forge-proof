@@ -32,3 +32,8 @@ class DescontoCase(unittest.TestCase):
 
     def test_CA_4_o_desconto_aplica_se_ao_total_com_portes(self):
         self.assertEqual(total([40], desconto=10), 39.15)
+
+
+class CarrinhoVazioCase(unittest.TestCase):
+    def test_um_carrinho_vazio_custa_zero(self):
+        self.assertEqual(total([]), 0)
