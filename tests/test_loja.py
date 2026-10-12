@@ -35,5 +35,8 @@ class DescontoCase(unittest.TestCase):
 
 
 class CarrinhoVazioCase(unittest.TestCase):
+    """A regressão do incidente #14: um carrinho vazio pagava 3,50 € de
+    portes em produção (v0.1.0)."""
+
     def test_um_carrinho_vazio_custa_zero(self):
         self.assertEqual(total([]), 0)
